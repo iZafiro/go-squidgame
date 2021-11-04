@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package leaderpb;
+
+option go_package = "api/leaderpb";
+
+message GetPlayerStateRequest {
+    int32 playerId = 1;
+}
+
+message GetPlayerStateResponse {
+    int32 stage = 1;
+    int32 row = 2;
+    bool hasStarted = 3;
+    bool hasMoved = 4;
+    bool hasLost = 5;
+}
+
+message SendPlayerMoveRequest {
+    int32 playerId = 1;
+    int32 move = 2;
+}
+
+message SendPlayerMoveResponse {
+    int32 result = 1;
+}
+
+service LeaderService{
+    rpc GetPlayerState (GetPlayerStateRequest) returns (GetPlayerStateResponse) {};
+    rpc SendPlayerMove (SendPlayerMoveRequest) returns (SendPlayerMoveResponse) {};
+}
