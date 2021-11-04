@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package datanodepb;
+
+option go_package = "api/datanodepb";
+
+message WriteRequest {
+    int32 stage = 1;
+    int32 row = 2;
+    repeated int32 moves = 3;
+    repeated int32 players = 4;
+}
+
+message WriteResponse {
+    int32 result = 1;
+}
+
+service DatanodeService{
+    rpc Write (WriteRequest) returns (WriteResponse) {};
+}
