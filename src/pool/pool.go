@@ -19,7 +19,7 @@ type server struct{}
 
 func main() {
 	//Connect to RabbitMQ
-	conn, err := amqp.Dial("amqp://guest:guest@10.6.43.59:5672/")
+	conn, err := amqp.Dial("amqp://usuario:passst@10.6.43.59:5672/")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
