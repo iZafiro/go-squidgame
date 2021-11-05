@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-squidgame/api/leaderpb"
+	"go-squidgame/api/poolpb"
 	"log"
 	"math"
 	"math/rand"
@@ -438,4 +439,43 @@ func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveR
 		Result: result,
 	}
 	return res, nil
+}
+
+func (*server) PlayerGetPool(ctx context.Context, req *leaderpb.PlayerGetPoolRequest) (*leaderpb.PlayerGetPoolResponse, error) {
+	// Unpack request
+	request := req.GetRequest()
+
+	fmt.Println(request)
+
+	// Connect to server
+	fmt.Println("Starting Client...")
+	cc, err := grpc.Dial("localhost:50056", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	c := poolpb.NewPoolServiceClient(cc)
+
+	// Pack response
+	pool := getPool(c)
+
+	// Send response
+	res := &leaderpb.PlayerGetPoolResponse{
+		Pool: int32(pool),
+	}
+	return res, nil
+}
+
+func getPool(c poolpb.PoolServiceClient) int32 {
+	// Pack request
+	req := &poolpb.GetPoolRequest{
+		Request: 1,
+	}
+
+	// Send request
+	res, err := c.GetPool(context.Background(), req)
+	if err != nil {
+		log.Fatalf("Error Call RPC: %v", err)
+	}
+	return res.Pool
 }
