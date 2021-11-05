@@ -394,6 +394,7 @@ func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateR
 	hasMoved := state.hasMoved[id]
 	hasLost := state.hasLost[id]
 
+	// Send response
 	res := &leaderpb.GetPlayerStateResponse{
 		Stage:      stage,
 		Row:        row,
@@ -429,6 +430,7 @@ func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveR
 	// Pack response
 	result := int32(1)
 
+	// Send response
 	res := &leaderpb.SendPlayerMoveResponse{
 		Result: result,
 	}
