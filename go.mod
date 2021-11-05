@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/streadway/amqp v1.0.0 // indirect
 	golang.org/x/net v0.0.0-20211104170005-ce137452f963 // indirect
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect
 	golang.org/x/text v0.3.7 // indirect
