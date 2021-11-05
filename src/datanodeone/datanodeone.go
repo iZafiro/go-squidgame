@@ -28,11 +28,17 @@ func main() {
 	}
 
 }
+
 func (*server) Write(ctx context.Context, req *datanodepb.WriteRequest) (*datanodepb.WriteResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	moves := req.GetMoves()
 	stage := req.GetStage()
 	players := req.GetPlayers()
+
+	/*fmt.Println("[DEBUG]")
+	fmt.Println("Moves ", moves)
+	fmt.Println("Etapa ", stage)
+	fmt.Println("Players ", players)*/
+
 	for i := 0; i < len(players); i++ {
 		saveData(moves[i], stage, players[i])
 	}
@@ -67,13 +73,15 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 	return res, nil
 }
 func saveData(move int32, stage int32, player int32) {
-	filename := "jugador_" + fmt.Sprint(player) + "__ronda_" + fmt.Sprint(stage) + ".txt"
+	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintln(f, move)
+	if move != -1 {
+		fmt.Fprintln(f, move)
+	}
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -84,7 +92,6 @@ func saveData(move int32, stage int32, player int32) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("file written successfully")
 }
 func readData(stage int32, player int32) [6]int32 {
 	moves_response := [6]int32{-1, -1, -1, -1, -1, -1}

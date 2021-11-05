@@ -59,9 +59,18 @@ func main() {
 	fmt.Println("Al finalizar cada etapa podrá preguntar por las jugadas de un jugador o")
 	fmt.Println("pasar a la siguiente etapa.")
 
+	// Connect to namenode server
+	fmt.Println("Starting Client...")
+	cc, err := grpc.Dial("localhost:50052", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	cn = namenodepb.NewNamenodeServiceClient(cc)
+
 	// Start server
 	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50051")
+	l, err := net.Listen("tcp", "0.0.0.0:50060")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}
@@ -70,15 +79,6 @@ func main() {
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
-
-	// Connect to namenode server
-	fmt.Println("Starting Client...")
-	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
-	}
-	defer cc.Close()
-	cn = namenodepb.NewNamenodeServiceClient(cc)
 }
 
 // Helper function to remove entry at index from integer array
@@ -232,7 +232,8 @@ func nextRow() {
 	// End of row logic
 	// This includes most winning / losing logic
 
-	// Paula: Llama a Save aquí
+	// Send save request to namenode
+	save()
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -493,6 +494,7 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 	return res.Pool
 }
 
+<<<<<<< HEAD
 func addToQueue(str string) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
 	if err != nil {
@@ -538,4 +540,23 @@ func addToQueue(str string) {
 		panic(err)
 	}
 
+=======
+func save() int32 {
+	var movesToSave []int32
+	movesToSave = state.moves[:]
+
+	// Pack request
+	req := &namenodepb.SaveRequest{
+		Stage: state.stage,
+		Row:   state.row,
+		Moves: movesToSave,
+	}
+
+	// Send request
+	res, err := cn.Save(context.Background(), req)
+	if err != nil {
+		log.Fatalf("Error Call RPC: %v", err)
+	}
+	return res.Result
+>>>>>>> 2f562ae5a8fa40faf97080e6056c5d762edbc0bb
 }
