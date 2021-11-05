@@ -64,12 +64,16 @@ func main() {
 	}
 }
 
+// Helper function to remove entry at index from integer array
 func removeIndex(arr []int, index int) []int {
 	return append(arr[:index], arr[index+1:]...)
 }
 
 func win(winners []int) {
+	// Game over message
 	fmt.Println("¡El juego del calamar ha finalizado!")
+
+	// List winners
 	fmt.Println("Los ganadores son: ")
 
 	for i := 0; i < len(winners); i++ {
@@ -80,14 +84,16 @@ func win(winners []int) {
 }
 
 func lose(id int) bool {
-	// Note: Player is informed in next GetPlayerState call
+	// Note: Player is informed in their next GetPlayerState call
 
 	state.hasLost[id] = true
 
-	// Felipe: Llama a tu función aquí.
+	// Felipe: Llama a informar al pozo aquí.
 
+	// Player game over message
 	fmt.Println("El jugador ", id+1, " ha muerto.")
 
+	// If only one player left, they win
 	hasLostCount := 0
 	winner := -1
 	for i := 0; i < 16; i++ {
@@ -97,7 +103,6 @@ func lose(id int) bool {
 			winner = i
 		}
 	}
-
 	if hasLostCount == 15 {
 		win([]int{winner})
 
@@ -108,15 +113,19 @@ func lose(id int) bool {
 }
 
 func nextStage(stage int32) {
+	// End of stage message
 	fmt.Println("¡Fin etapa ", stage, "!")
+
+	// List players left
 	fmt.Println("Los jugadores vivos son: ")
 
-	// Reset values and keep track of players who have not lost
+	// Reset values
 	state.stage = stage + 1
 	state.row = 1
 	state.hasStarted = false
 	state.leaderMove = -1
 
+	// Keep track of players left
 	hasNotLostCount := 0
 	var hasNotLost []int
 	for i := 0; i < 16; i++ {
@@ -126,6 +135,7 @@ func nextStage(stage int32) {
 			hasNotLostCount++
 		}
 
+		// Reset values
 		state.moves[i] = -1
 		state.hasMoved[i] = false
 		state.moveSums[i] = 0
@@ -134,20 +144,29 @@ func nextStage(stage int32) {
 
 	// Ask for input
 	for {
-		// Paula: El menú por si se quiere llamar a Open irá aquí
+		fmt.Println("¿Qué desea hacer?")
+		fmt.Println("1: Dar comienzo a la siguiente etapa.")
+		fmt.Println("2: Preguntar por todas las jugadas de un jugador.")
 
-		fmt.Println("¿Desea pasar a la siguiente etapa? (Y/N)")
-
-		var input string
+		var input int
 		fmt.Scanln(&input)
-		if input == "Y" {
+		if input == 1 {
 			state.hasStarted = true
 			break
+		} else if input == 2 {
+			var inputPlayer int32
+			fmt.Println("Ingrese el número del jugador (1-16, 1 es el jugador humano): ")
+			fmt.Scanln(&inputPlayer)
+
+			// Paula: Llamar a Open con inputPlayer - 1
 		}
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
+	// Beginning of stage logic
+	// This includes restoring the parity of the number of players
+	// and teaming up
 	if state.stage == 2 {
 		// If number of players is odd, a random player loses
 		if hasNotLostCount%2 == 1 {
@@ -193,6 +212,9 @@ func nextStage(stage int32) {
 }
 
 func nextRow() {
+	// End of row logic
+	// This includes most winning / losing logic
+
 	// Paula: Llama a Save aquí
 
 	rand.Seed(time.Now().UnixNano())
@@ -261,7 +283,7 @@ func nextRow() {
 		team1Parity := team1Sum % 2
 		team2Parity := team2Sum % 2
 
-		// Handle all cases in truth table
+		// Handle all cases in truth table given by stage logic
 		if team1Parity != leaderParity && team2Parity != leaderParity {
 			fmt.Println("Ningún equipo ha obtenido la misma paridad que el líder.")
 
@@ -313,29 +335,39 @@ func nextRow() {
 		// Leader moves
 		state.leaderMove = rand.Int31n(10) + 1
 
+		// Get winners in each team
 		var winners []int
 		for i := 1; i <= state.numTeams; i++ {
-			var playersInTeam []int
 
+			// Get players in team
+			var playersInTeam []int
 			for j := 0; j < 16; j++ {
 				if !state.hasLost[j] && state.teams[j] == int32(i) {
 					playersInTeam = append(playersInTeam, j)
 				}
 			}
 
-			//fmt.Println("[DEBUG] ", i, playersInTeam)
-
+			// Stage logic
 			if state.moves[playersInTeam[0]] == state.moves[playersInTeam[1]] {
 				winners = append(winners, playersInTeam...)
 			} else {
 				if math.Abs(float64(state.moves[playersInTeam[0]]-state.leaderMove)) < math.Abs(float64(state.moves[playersInTeam[1]]-state.leaderMove)) {
 					winners = append(winners, playersInTeam[0])
+					gameOver := lose(playersInTeam[1])
+					if gameOver {
+						return
+					}
 				} else {
 					winners = append(winners, playersInTeam[1])
+					gameOver := lose(playersInTeam[0])
+					if gameOver {
+						return
+					}
 				}
 			}
 		}
 
+		// Final call to win
 		win(winners)
 
 		return
@@ -352,8 +384,10 @@ func nextRow() {
 }
 
 func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateRequest) (*leaderpb.GetPlayerStateResponse, error) {
+	// Unpack request
 	id := req.GetPlayerId()
 
+	// Pack response
 	stage := state.stage
 	row := state.row
 	hasStarted := state.hasStarted
@@ -371,15 +405,16 @@ func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateR
 }
 
 func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveRequest) (*leaderpb.SendPlayerMoveResponse, error) {
+	// Unpack request
 	id := req.GetPlayerId()
 	move := req.GetMove()
 
-	//fmt.Println("[DEBUG] El jugador ", id+1, " en la ronda ", state.row, " ha enviado un ", move)
-
+	// Update game state
 	state.moves[id] = move
 	state.hasMoved[id] = true
 	state.moveSums[id] += move
 
+	// If all players have moved in current row, do end of row logic
 	allHaveMoved := true
 	for i := 0; i < 16; i++ {
 		if !state.hasLost[i] && !state.hasMoved[i] {
@@ -387,11 +422,11 @@ func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveR
 			break
 		}
 	}
-
 	if allHaveMoved {
 		nextRow()
 	}
 
+	// Pack response
 	result := int32(1)
 
 	res := &leaderpb.SendPlayerMoveResponse{
