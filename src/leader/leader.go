@@ -15,6 +15,9 @@ import (
 
 type server struct{}
 
+// This struct stores the full game state at a given row
+// Player state is requested every 200 ms by players who have not lost
+// and the leader responds with all relevant data
 type GameState struct {
 	stage      int32
 	row        int32
@@ -29,12 +32,13 @@ type GameState struct {
 }
 
 var state GameState
+var s *grpc.Server
 
 func main() {
 	// Set initial values
 	state.stage = 1
 	state.row = 1
-	state.hasStarted = false
+	state.hasStarted = true
 	state.leaderMove = -1
 	state.numTeams = -1
 	for i := 0; i < 16; i++ {
@@ -45,37 +49,54 @@ func main() {
 		state.teams[i] = -1
 	}
 
+	// Welcome
+	fmt.Println("¡Bienvenido al Juego del Calamar!")
+	fmt.Println("Al finalizar cada etapa podrá preguntar por las jugadas de un jugador o")
+	fmt.Println("pasar a la siguiente etapa.")
+
 	// Start server
 	fmt.Println("Starting server...")
 	l, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}
-	s := grpc.NewServer()
+	s = grpc.NewServer()
 	leaderpb.RegisterLeaderServiceServer(s, &server{})
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
 }
 
+// Helper function to remove entry at index from integer array
+func removeIndex(arr []int, index int) []int {
+	return append(arr[:index], arr[index+1:]...)
+}
+
 func win(winners []int) {
+	// Game over message
 	fmt.Println("¡El juego del calamar ha finalizado!")
+
+	// List winners
 	fmt.Println("Los ganadores son: ")
 
 	for i := 0; i < len(winners); i++ {
-		fmt.Println("Jugador ", winners[i])
+		fmt.Println("Jugador ", winners[i]+1)
 	}
+
+	time.Sleep(time.Duration(1<<63 - 1))
 }
 
 func lose(id int) bool {
-	// Note: Player is informed in next GetPlayerState call
+	// Note: Player is informed in their next GetPlayerState call
 
 	state.hasLost[id] = true
 
-	// Felipe: Llama a tu función aquí.
+	// Felipe: Llama a informar al pozo aquí.
 
+	// Player game over message
 	fmt.Println("El jugador ", id+1, " ha muerto.")
 
+	// If only one player left, they win
 	hasLostCount := 0
 	winner := -1
 	for i := 0; i < 16; i++ {
@@ -85,7 +106,6 @@ func lose(id int) bool {
 			winner = i
 		}
 	}
-
 	if hasLostCount == 15 {
 		win([]int{winner})
 
@@ -96,33 +116,108 @@ func lose(id int) bool {
 }
 
 func nextStage(stage int32) {
+	// End of stage message
 	fmt.Println("¡Fin etapa ", stage, "!")
+
+	// List players left
 	fmt.Println("Los jugadores vivos son: ")
 
 	// Reset values
 	state.stage = stage + 1
 	state.row = 1
+	state.hasStarted = false
 	state.leaderMove = -1
+
+	// Keep track of players left
+	hasNotLostCount := 0
+	var hasNotLost []int
 	for i := 0; i < 16; i++ {
 		if !state.hasLost[i] {
 			fmt.Println("Jugador ", i+1)
+			hasNotLost = append(hasNotLost, i)
+			hasNotLostCount++
 		}
 
+		// Reset values
 		state.moves[i] = -1
 		state.hasMoved[i] = false
 		state.moveSums[i] = 0
+		state.teams[i] = -1
 	}
 
+	// Ask for input
+	for {
+		fmt.Println("¿Qué desea hacer?")
+		fmt.Println("1: Dar comienzo a la siguiente etapa.")
+		fmt.Println("2: Preguntar por todas las jugadas de un jugador.")
+
+		var input int
+		fmt.Scanln(&input)
+		if input == 1 {
+			state.hasStarted = true
+			break
+		} else if input == 2 {
+			var inputPlayer int32
+			fmt.Println("Ingrese el número del jugador (1-16, 1 es el jugador humano): ")
+			fmt.Scanln(&inputPlayer)
+
+			// Paula: Llamar a Open con inputPlayer - 1
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
+
+	// Beginning of stage logic
+	// This includes restoring the parity of the number of players
+	// and teaming up
 	if state.stage == 2 {
-		// TEAM UP
-	} else if state.stage == 3 {
-		// TEAM UP
-	}
+		// If number of players is odd, a random player loses
+		if hasNotLostCount%2 == 1 {
+			toLose := rand.Intn(hasNotLostCount)
+			gameOver := lose(hasNotLost[toLose])
+			if gameOver {
+				return
+			}
+			removeIndex(hasNotLost, toLose)
+			hasNotLostCount--
+		}
 
-	// GET INPUT
+		// Team up in two teams
+		for i := 0; i < hasNotLostCount; i++ {
+			if i%2 == 0 {
+				state.teams[hasNotLost[i]] = 1
+			} else {
+				state.teams[hasNotLost[i]] = 2
+			}
+		}
+	} else if state.stage == 3 {
+		// If number of players is odd, a random player loses
+		if hasNotLostCount%2 == 1 {
+			toLose := rand.Intn(hasNotLostCount)
+			gameOver := lose(hasNotLost[toLose])
+			if gameOver {
+				return
+			}
+			hasNotLostCount--
+			removeIndex(hasNotLost, toLose)
+		}
+
+		// Team up in pairs
+		for i := 0; i < hasNotLostCount; i++ {
+			if 2*i >= hasNotLostCount {
+				state.numTeams = i
+				break
+			}
+			state.teams[hasNotLost[2*i]] = int32(i + 1)
+			state.teams[hasNotLost[2*i+1]] = int32(i + 1)
+		}
+	}
 }
 
 func nextRow() {
+	// End of row logic
+	// This includes most winning / losing logic
+
 	// Paula: Llama a Save aquí
 
 	rand.Seed(time.Now().UnixNano())
@@ -191,7 +286,7 @@ func nextRow() {
 		team1Parity := team1Sum % 2
 		team2Parity := team2Sum % 2
 
-		// Handle all cases in truth table
+		// Handle all cases in truth table given by stage logic
 		if team1Parity != leaderParity && team2Parity != leaderParity {
 			fmt.Println("Ningún equipo ha obtenido la misma paridad que el líder.")
 
@@ -231,6 +326,8 @@ func nextRow() {
 					}
 				}
 			}
+		} else {
+			fmt.Println("Ambos equipos han obtenido la misma paridad que el líder.")
 		}
 
 		// Go to next stage
@@ -241,27 +338,42 @@ func nextRow() {
 		// Leader moves
 		state.leaderMove = rand.Int31n(10) + 1
 
+		// Get winners in each team
+		var winners []int
 		for i := 1; i <= state.numTeams; i++ {
-			var playersInTeam []int
 
+			// Get players in team
+			var playersInTeam []int
 			for j := 0; j < 16; j++ {
 				if !state.hasLost[j] && state.teams[j] == int32(i) {
 					playersInTeam = append(playersInTeam, j)
 				}
 			}
 
+			// Stage logic
 			if state.moves[playersInTeam[0]] == state.moves[playersInTeam[1]] {
-				win(playersInTeam)
+				winners = append(winners, playersInTeam...)
 			} else {
 				if math.Abs(float64(state.moves[playersInTeam[0]]-state.leaderMove)) < math.Abs(float64(state.moves[playersInTeam[1]]-state.leaderMove)) {
-					win([]int{playersInTeam[0]})
+					winners = append(winners, playersInTeam[0])
+					gameOver := lose(playersInTeam[1])
+					if gameOver {
+						return
+					}
 				} else {
-					win([]int{playersInTeam[1]})
+					winners = append(winners, playersInTeam[1])
+					gameOver := lose(playersInTeam[0])
+					if gameOver {
+						return
+					}
 				}
 			}
-
-			return
 		}
+
+		// Final call to win
+		win(winners)
+
+		return
 	}
 
 	// Reset values
@@ -269,23 +381,23 @@ func nextRow() {
 	for i := 0; i < 16; i++ {
 		state.moves[i] = -1
 		state.hasMoved[i] = false
-		state.moveSums[i] = 0
 	}
 
 	state.row++
 }
 
 func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateRequest) (*leaderpb.GetPlayerStateResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
+	// Unpack request
 	id := req.GetPlayerId()
-	log.Println(id)
 
+	// Pack response
 	stage := state.stage
 	row := state.row
 	hasStarted := state.hasStarted
 	hasMoved := state.hasMoved[id]
 	hasLost := state.hasLost[id]
 
+	// Send response
 	res := &leaderpb.GetPlayerStateResponse{
 		Stage:      stage,
 		Row:        row,
@@ -297,29 +409,31 @@ func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateR
 }
 
 func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveRequest) (*leaderpb.SendPlayerMoveResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
+	// Unpack request
 	id := req.GetPlayerId()
 	move := req.GetMove()
-	log.Println(id, move)
 
+	// Update game state
 	state.moves[id] = move
 	state.hasMoved[id] = true
 	state.moveSums[id] += move
 
+	// If all players have moved in current row, do end of row logic
 	allHaveMoved := true
 	for i := 0; i < 16; i++ {
-		if !state.hasMoved[i] {
+		if !state.hasLost[i] && !state.hasMoved[i] {
 			allHaveMoved = false
 			break
 		}
 	}
-
 	if allHaveMoved {
 		nextRow()
 	}
 
+	// Pack response
 	result := int32(1)
 
+	// Send response
 	res := &leaderpb.SendPlayerMoveResponse{
 		Result: result,
 	}
