@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"google.golang.org/grpc"
@@ -16,6 +17,10 @@ import (
 type server struct{}
 
 func main() {
+	folder := "out"
+
+	RemoveContents(folder)
+
 	fmt.Println("Starting server...")
 	l, err := net.Listen("tcp", "0.0.0.0:50055")
 	if err != nil {
@@ -89,7 +94,8 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 // Función para guardar la información de un jugador en una ronda en una Etapa determinada
 func saveData(move int32, stage int32, player int32) {
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	folder := "out/"
+	f, err := os.OpenFile(folder+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,8 +118,9 @@ func saveData(move int32, stage int32, player int32) {
 // Función para leer la información de los movimientos de un jugador en una Etapa
 func readData(stage int32, player int32) []int32 {
 	moves_response := []int32{}
+	folder := "out/"
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	file, err := os.Open(filename)
+	file, err := os.Open(folder + filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -134,4 +141,24 @@ func readData(stage int32, player int32) []int32 {
 		log.Fatal(err)
 	}
 	return moves_response
+}
+
+// Borra los archivos creados en la partida
+func RemoveContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
