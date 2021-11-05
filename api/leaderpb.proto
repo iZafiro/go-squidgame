@@ -25,7 +25,16 @@ message SendPlayerMoveResponse {
     int32 result = 1;
 }
 
+message PlayerGetPoolRequest {
+    int32 request = 1;
+}
+
+message PlayerGetPoolResponse {
+    int32 pool = 1;
+}
+
 service LeaderService{
     rpc GetPlayerState (GetPlayerStateRequest) returns (GetPlayerStateResponse) {};
     rpc SendPlayerMove (SendPlayerMoveRequest) returns (SendPlayerMoveResponse) {};
+    rpc PlayerGetPool (PlayerGetPoolRequest) returns (PlayerGetPoolResponse) {};
 }

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package poolpb;
+
+option go_package = "api/poolpb";
+
+message GetPoolRequest {
+    int32 request = 1;
+}
+
+message GetPoolResponse {
+    int32 pool = 1;
+}
+
+service PoolService{
+    rpc GetPool (GetPoolRequest) returns (GetPoolResponse) {};
+}
