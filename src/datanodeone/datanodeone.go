@@ -17,7 +17,7 @@ type server struct{}
 
 func main() {
 	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50051")
+	l, err := net.Listen("tcp", "0.0.0.0:50053")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}

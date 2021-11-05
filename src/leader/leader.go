@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-squidgame/api/leaderpb"
+	"go-squidgame/api/namenodepb"
 	"go-squidgame/api/poolpb"
 	"log"
 	"math"
@@ -34,6 +35,7 @@ type GameState struct {
 
 var state GameState
 var s *grpc.Server
+var cn namenodepb.NamenodeServiceClient
 
 func main() {
 	// Set initial values
@@ -66,6 +68,15 @@ func main() {
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
+
+	// Connect to namenode server
+	fmt.Println("Starting Client...")
+	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	cn = namenodepb.NewNamenodeServiceClient(cc)
 }
 
 // Helper function to remove entry at index from integer array
