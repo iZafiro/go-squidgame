@@ -18,24 +18,15 @@ import (
 type server struct{}
 
 func main() {
-	// Start server
-	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50056")
-	if err != nil {
-		log.Fatalf("Failed to listen %v", err)
-	}
-	s := grpc.NewServer()
-	poolpb.RegisterPoolServiceServer(s, &server{})
-	if err := s.Serve(l); err != nil {
-		log.Fatalf("Failed to server %v", err)
-	}
-
+	//Connect to RabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
 	defer conn.Close()
+
+	fmt.Println("Succesfully connected to RabbitMQ instance")
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -53,8 +44,13 @@ func main() {
 		false,
 		nil,
 	)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
 
-	forever := make(chan bool)
+	fmt.Println(" [*] - waiting for messages")
+	add_to_pool("")
 	go func() {
 		for d := range msgs {
 			fmt.Printf("Recieved Message: %s\n", d.Body)
@@ -66,9 +62,17 @@ func main() {
 		}
 	}()
 
-	fmt.Println(" [*] - waiting for messages")
-	add_to_pool("")
-	<-forever
+	// Start server
+	fmt.Println("Starting server...")
+	l, err := net.Listen("tcp", "0.0.0.0:50056")
+	if err != nil {
+		log.Fatalf("Failed to listen %v", err)
+	}
+	s := grpc.NewServer()
+	poolpb.RegisterPoolServiceServer(s, &server{})
+	if err := s.Serve(l); err != nil {
+		log.Fatalf("Failed to server %v", err)
+	}
 }
 
 func (*server) GetPool(ctx context.Context, req *poolpb.GetPoolRequest) (*poolpb.GetPoolResponse, error) {
