@@ -507,7 +507,6 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 	return res.Pool
 }
 
-<<<<<<< HEAD
 func addToQueue(str string) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
 	if err != nil {
@@ -552,8 +551,8 @@ func addToQueue(str string) {
 		fmt.Println(err)
 		panic(err)
 	}
+}
 
-=======
 func save() int32 {
 	var movesToSave []int32
 	movesToSave = state.moves[:]
@@ -571,7 +570,6 @@ func save() int32 {
 		log.Fatalf("Error Call RPC: %v", err)
 	}
 	return res.Result
->>>>>>> 2f562ae5a8fa40faf97080e6056c5d762edbc0bb
 }
 
 func open(p int32) ([]int32, int32, int32) {
