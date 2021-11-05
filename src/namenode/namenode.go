@@ -33,14 +33,22 @@ type moves_datanodes struct {
 	datanode3 []int32
 }
 
+type stages_state struct {
+	start        bool
+	actual_stage int32
+}
+
 var pdh players_datanodes_hash
 var players players_datanodes
 var dn_moves moves_datanodes
+var global_stage stages_state
 
 func main() {
 	pdh.stage1 = [16]string{}
 	pdh.stage2 = [16]string{}
 	pdh.stage3 = [16]string{}
+	global_stage.start = true
+	global_stage.actual_stage = int32(1)
 	mapPlayersToDatanodes([]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, 1)
 	fmt.Println("Starting server...")
 	l, err := net.Listen("tcp", "0.0.0.0:50051")
@@ -60,7 +68,18 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 	row := req.GetRow()
 	stage := req.GetStage()
 
-	mapPlayersToDatanodes(moves, stage)
+	//De este modo se asignan los datanodes solo en la primera ronda y al cambio de etapa
+	if global_stage.start {
+		mapPlayersToDatanodes(moves, stage)
+		log.Println("Asignación primera ronda")
+	} else {
+		if stage > global_stage.actual_stage {
+			mapPlayersToDatanodes(moves, stage)
+			global_stage.actual_stage = stage
+			log.Println("Asignación ronda", global_stage.actual_stage)
+		}
+	}
+
 	for i := 0; i < len(moves); i++ {
 		if stage == 1 {
 			saveData(int32(i+1), row, pdh.stage1[i])
