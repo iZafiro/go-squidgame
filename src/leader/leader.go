@@ -15,6 +15,9 @@ import (
 
 type server struct{}
 
+// This struct stores the full game state at a given row
+// Player state is requested every 200 ms by players who have not lost
+// and the leader responds with all relevant data
 type GameState struct {
 	stage      int32
 	row        int32
