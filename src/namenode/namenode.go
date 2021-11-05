@@ -214,7 +214,7 @@ func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenode
 	move_stage2 = res.GetMoveStage2()
 	move_stage3 = res.GetMoveStage3()
 	response := &namenodepb.OpenResponse{
-		MovesStage1: moves_stage1[:],
+		MovesStage1: moves_stage1,
 		MoveStage2:  move_stage2,
 		MoveStage3:  move_stage3,
 	}

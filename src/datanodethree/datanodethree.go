@@ -28,6 +28,7 @@ func main() {
 	}
 
 }
+
 func (*server) Write(ctx context.Context, req *datanodepb.WriteRequest) (*datanodepb.WriteResponse, error) {
 	moves := req.GetMoves()
 	stage := req.GetStage()
@@ -51,21 +52,31 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 	log.Printf("Greet was invoked  with %v\n", req)
 	stage := req.GetStage()
 	player := req.GetPlayer()
-	moves_stage1 := [6]int32{}
+	moves_stage1 := []int32{-1, -1, -1, -1, -1, -1}
 	move_stage2 := int32(-1)
 	move_stage3 := int32(-1)
 	for i := 1; i <= int(stage); i++ {
+		data := readData(int32(i), player)
 		if i == 1 {
-			moves_stage1 = readData(int32(i), player)
+			moves_stage1 = data
 		} else if i == 2 {
-			move_stage2 = readData(int32(i), player)[0]
+			if len(data) > 0 {
+				move_stage2 = data[0]
+			} else {
+				move_stage2 = -1
+			}
 		} else {
-			move_stage3 = readData(int32(i), player)[0]
+			if len(data) > 0 {
+				move_stage3 = data[0]
+			} else {
+				move_stage3 = -1
+			}
+
 		}
 	}
 
 	res := &datanodepb.ReadResponse{
-		MovesStage1: moves_stage1[:],
+		MovesStage1: moves_stage1,
 		MoveStage2:  move_stage2,
 		MoveStage3:  move_stage3,
 	}
@@ -92,15 +103,14 @@ func saveData(move int32, stage int32, player int32) {
 		return
 	}
 }
-func readData(stage int32, player int32) [6]int32 {
-	moves_response := [6]int32{-1, -1, -1, -1, -1, -1}
-	filename := "jugador_" + fmt.Sprint(player) + "__ronda_" + fmt.Sprint(stage) + ".txt"
+func readData(stage int32, player int32) []int32 {
+	moves_response := []int32{}
+	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	index := 0
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
@@ -110,8 +120,7 @@ func readData(stage int32, player int32) [6]int32 {
 			panic(err)
 		}
 		result := int32(i)
-		moves_response[index] = result
-		index++
+		moves_response = append(moves_response, result)
 	}
 
 	if err := scanner.Err(); err != nil {

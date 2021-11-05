@@ -173,7 +173,20 @@ func nextStage(stage int32) {
 			fmt.Println("Ingrese el número del jugador (1-16, 1 es el jugador humano): ")
 			fmt.Scanln(&inputPlayer)
 
-			// Paula: Llamar a Open con inputPlayer - 1
+			movesStage1, moveStage2, moveStage3 := open(inputPlayer - 1)
+
+			for i := 0; i < len(movesStage1); i++ {
+				fmt.Println("Etapa 1")
+				fmt.Println("En la ronda ", i+1, " jugó ", movesStage1[i])
+			}
+
+			if moveStage2 != -1 {
+				fmt.Println("En la etapa 2 jugó ", moveStage2)
+			}
+
+			if moveStage3 != -1 {
+				fmt.Println("En la etapa 3 jugó ", moveStage3)
+			}
 		}
 	}
 
@@ -509,4 +522,19 @@ func save() int32 {
 		log.Fatalf("Error Call RPC: %v", err)
 	}
 	return res.Result
+}
+
+func open(p int32) ([]int32, int32, int32) {
+	// Pack request
+	req := &namenodepb.OpenRequest{
+		Stage:  state.stage - 1,
+		Player: p,
+	}
+
+	// Send request
+	res, err := cn.Open(context.Background(), req)
+	if err != nil {
+		log.Fatalf("Error Call RPC: %v", err)
+	}
+	return res.MovesStage1, res.MoveStage2, res.MoveStage3
 }
