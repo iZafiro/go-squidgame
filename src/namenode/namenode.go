@@ -53,19 +53,6 @@ func main() {
 	pdh.stage3 = [16]string{}
 	global_stage.start = true
 	global_stage.actual_stage = int32(1)
-	mapPlayersToDatanodes([]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, 1)
-
-	// Start server
-	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50052")
-	if err != nil {
-		log.Fatalf("Failed to listen %v", err)
-	}
-	s := grpc.NewServer()
-	namenodepb.RegisterNamenodeServiceServer(s, &server{})
-	if err := s.Serve(l); err != nil {
-		log.Fatalf("Failed to server %v", err)
-	}
 
 	// Connect to datanodeone server
 	fmt.Println("Starting Client...")
@@ -93,25 +80,43 @@ func main() {
 	}
 	defer cc.Close()
 	cd3 = datanodepb.NewDatanodeServiceClient(cc)
+
+	// Start server
+	fmt.Println("Starting server...")
+	l, err := net.Listen("tcp", "0.0.0.0:50052")
+	if err != nil {
+		log.Fatalf("Failed to listen %v", err)
+	}
+	s := grpc.NewServer()
+	namenodepb.RegisterNamenodeServiceServer(s, &server{})
+	if err := s.Serve(l); err != nil {
+		log.Fatalf("Failed to server %v", err)
+	}
 }
 
 func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenodepb.SaveResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	moves := req.GetMoves()
 	row := req.GetRow()
 	stage := req.GetStage()
 
+	/*fmt.Println("[DEBUG]")
+	fmt.Println("Moves ", moves)
+	fmt.Println("Ronda ", row)
+	fmt.Println("Etapa ", stage)*/
+
 	//De este modo se asignan los datanodes solo en la primera ronda y al cambio de etapa
 	if global_stage.start {
 		mapPlayersToDatanodes(moves, stage)
-		log.Println("Asignación primera ronda")
+		global_stage.start = false
+		//]ln("Asignación primera ronda")
 	} else {
 		if stage > global_stage.actual_stage {
 			mapPlayersToDatanodes(moves, stage)
 			global_stage.actual_stage = stage
-			log.Println("Asignación ronda", global_stage.actual_stage)
+			//]ln("Asignación ronda", global_stage.actual_stage)
 		}
 	}
+	updateMoves(moves)
 
 	for i := 0; i < len(moves); i++ {
 		if stage == 1 {
@@ -165,7 +170,7 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 
 	}
 
-	log.Println(moves)
+	//]ln(moves)
 	result := int32(1)
 	res := &namenodepb.SaveResponse{
 		Result: result,
@@ -235,9 +240,14 @@ func saveData(player int32, row int32, ip string) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("file written successfully")
 }
 func mapPlayersToDatanodes(moves []int32, stage int32) {
+	dn_moves.datanode1 = []int32{}
+	dn_moves.datanode2 = []int32{}
+	dn_moves.datanode3 = []int32{}
+	players.datanode1 = []int32{}
+	players.datanode2 = []int32{}
+	players.datanode3 = []int32{}
 	in := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	datanode_index := int(0)
 	datanodes := [3]string{"0.0.0.0:50053", "0.0.0.0:50054", "0.0.0.0:50055"}
@@ -269,8 +279,24 @@ func mapPlayersToDatanodes(moves []int32, stage int32) {
 		}
 		in = remove(in, randomIndex)
 	}
-	fmt.Println(players, dn_moves)
+	//fmt.Println(players, dn_moves)
 }
+func updateMoves(moves []int32) {
+	dn_moves.datanode1 = []int32{}
+	dn_moves.datanode2 = []int32{}
+	dn_moves.datanode3 = []int32{}
+
+	for i := 0; i < len(players.datanode1); i++ {
+		dn_moves.datanode1 = append(dn_moves.datanode1, moves[players.datanode1[i]])
+	}
+	for i := 0; i < len(players.datanode2); i++ {
+		dn_moves.datanode2 = append(dn_moves.datanode2, moves[players.datanode2[i]])
+	}
+	for i := 0; i < len(players.datanode3); i++ {
+		dn_moves.datanode3 = append(dn_moves.datanode3, moves[players.datanode3[i]])
+	}
+}
+
 func remove(s []int, i int) []int {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
