@@ -179,17 +179,46 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 }
 
 func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenodepb.OpenResponse, error) {
-	//stage := req.GetStage()
-	//player := req.GetPlayer()
-	moves_stage1 := [4]int32{-1, -1, -1, -1}
+	log.Printf("Greet was invoked  with %v\n", req)
+	stage := req.GetStage()
+	player := req.GetPlayer()
+	var moves_stage1 []int32
 	move_stage2 := int32(-1)
 	move_stage3 := int32(-1)
-	res := &namenodepb.OpenResponse{
+	datanode_req := &datanodepb.ReadRequest{
+		Stage:  stage,
+		Player: player,
+	}
+	var res *datanodepb.ReadResponse
+	var err error
+	if int32InSlice(player, players.datanode1) {
+		// Send request
+		res, err = cd1.Read(context.Background(), datanode_req)
+		if err != nil {
+			log.Fatalf("Error Call RPC: %v", err)
+		}
+	} else if int32InSlice(player, players.datanode2) {
+		// Send request
+		res, err = cd2.Read(context.Background(), datanode_req)
+		if err != nil {
+			log.Fatalf("Error Call RPC: %v", err)
+		}
+	} else {
+		// Send requestmapPlayersToDatanodes(moves []int32, stage int32) {
+		res, err = cd3.Read(context.Background(), datanode_req)
+		if err != nil {
+			log.Fatalf("Error Call RPC: %v", err)
+		}
+	}
+	moves_stage1 = res.GetMovesStage1()
+	move_stage2 = res.GetMoveStage2()
+	move_stage3 = res.GetMoveStage3()
+	response := &namenodepb.OpenResponse{
 		MovesStage1: moves_stage1[:],
 		MoveStage2:  move_stage2,
 		MoveStage3:  move_stage3,
 	}
-	return res, nil
+	return response, nil
 }
 
 func saveData(player int32, row int32, ip string) {
@@ -271,4 +300,12 @@ func updateMoves(moves []int32) {
 func remove(s []int, i int) []int {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
+}
+func int32InSlice(a int32, list []int32) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
