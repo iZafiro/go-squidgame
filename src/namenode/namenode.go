@@ -43,6 +43,10 @@ var players players_datanodes
 var dn_moves moves_datanodes
 var global_stage stages_state
 
+var cd1 datanodepb.DatanodeServiceClient
+var cd2 datanodepb.DatanodeServiceClient
+var cd3 datanodepb.DatanodeServiceClient
+
 func main() {
 	pdh.stage1 = [16]string{}
 	pdh.stage2 = [16]string{}
@@ -50,8 +54,10 @@ func main() {
 	global_stage.start = true
 	global_stage.actual_stage = int32(1)
 	mapPlayersToDatanodes([]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, 1)
+
+	// Start server
 	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50051")
+	l, err := net.Listen("tcp", "0.0.0.0:50052")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}
@@ -60,6 +66,33 @@ func main() {
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
+
+	// Connect to datanodeone server
+	fmt.Println("Starting Client...")
+	cc, err := grpc.Dial("localhost:50053", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	cd1 = datanodepb.NewDatanodeServiceClient(cc)
+
+	// Connect to datanodetwo server
+	fmt.Println("Starting Client...")
+	cc, err = grpc.Dial("localhost:50054", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	cd2 = datanodepb.NewDatanodeServiceClient(cc)
+
+	// Connect to datanodethree server
+	fmt.Println("Starting Client...")
+	cc, err = grpc.Dial("localhost:50055", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	cd3 = datanodepb.NewDatanodeServiceClient(cc)
 }
 
 func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenodepb.SaveResponse, error) {
@@ -98,17 +131,35 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 				Moves:   dn_moves.datanode1,
 				Players: players.datanode1,
 			}
+
+			// Send request
+			_, err := cd1.Write(context.Background(), datanode_req)
+			if err != nil {
+				log.Fatalf("Error Call RPC: %v", err)
+			}
 		case 1:
 			datanode_req := &datanodepb.WriteRequest{
 				Stage:   stage,
 				Moves:   dn_moves.datanode2,
 				Players: players.datanode2,
 			}
+
+			// Send request
+			_, err := cd2.Write(context.Background(), datanode_req)
+			if err != nil {
+				log.Fatalf("Error Call RPC: %v", err)
+			}
 		case 2:
 			datanode_req := &datanodepb.WriteRequest{
 				Stage:   stage,
 				Moves:   dn_moves.datanode3,
 				Players: players.datanode3,
+			}
+
+			// Send request
+			_, err := cd3.Write(context.Background(), datanode_req)
+			if err != nil {
+				log.Fatalf("Error Call RPC: %v", err)
 			}
 		}
 
