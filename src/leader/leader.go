@@ -29,12 +29,13 @@ type GameState struct {
 }
 
 var state GameState
+var s *grpc.Server
 
 func main() {
 	// Set initial values
 	state.stage = 1
 	state.row = 1
-	state.hasStarted = false
+	state.hasStarted = true
 	state.leaderMove = -1
 	state.numTeams = -1
 	for i := 0; i < 16; i++ {
@@ -45,17 +46,26 @@ func main() {
 		state.teams[i] = -1
 	}
 
+	// Welcome
+	fmt.Println("¡Bienvenido al Juego del Calamar!")
+	fmt.Println("Al finalizar cada etapa podrá preguntar por las jugadas de un jugador o")
+	fmt.Println("pasar a la siguiente etapa.")
+
 	// Start server
 	fmt.Println("Starting server...")
 	l, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}
-	s := grpc.NewServer()
+	s = grpc.NewServer()
 	leaderpb.RegisterLeaderServiceServer(s, &server{})
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
+}
+
+func removeIndex(arr []int, index int) []int {
+	return append(arr[:index], arr[index+1:]...)
 }
 
 func win(winners []int) {
@@ -63,8 +73,10 @@ func win(winners []int) {
 	fmt.Println("Los ganadores son: ")
 
 	for i := 0; i < len(winners); i++ {
-		fmt.Println("Jugador ", winners[i])
+		fmt.Println("Jugador ", winners[i]+1)
 	}
+
+	time.Sleep(time.Duration(1<<63 - 1))
 }
 
 func lose(id int) bool {
@@ -99,27 +111,85 @@ func nextStage(stage int32) {
 	fmt.Println("¡Fin etapa ", stage, "!")
 	fmt.Println("Los jugadores vivos son: ")
 
-	// Reset values
+	// Reset values and keep track of players who have not lost
 	state.stage = stage + 1
 	state.row = 1
+	state.hasStarted = false
 	state.leaderMove = -1
+
+	hasNotLostCount := 0
+	var hasNotLost []int
 	for i := 0; i < 16; i++ {
 		if !state.hasLost[i] {
 			fmt.Println("Jugador ", i+1)
+			hasNotLost = append(hasNotLost, i)
+			hasNotLostCount++
 		}
 
 		state.moves[i] = -1
 		state.hasMoved[i] = false
 		state.moveSums[i] = 0
+		state.teams[i] = -1
 	}
+
+	// Ask for input
+	for {
+		// Paula: El menú por si se quiere llamar a Open irá aquí
+
+		fmt.Println("¿Desea pasar a la siguiente etapa? (Y/N)")
+
+		var input string
+		fmt.Scanln(&input)
+		if input == "Y" {
+			state.hasStarted = true
+			break
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	if state.stage == 2 {
-		// TEAM UP
-	} else if state.stage == 3 {
-		// TEAM UP
-	}
+		// If number of players is odd, a random player loses
+		if hasNotLostCount%2 == 1 {
+			toLose := rand.Intn(hasNotLostCount)
+			gameOver := lose(hasNotLost[toLose])
+			if gameOver {
+				return
+			}
+			removeIndex(hasNotLost, toLose)
+			hasNotLostCount--
+		}
 
-	// GET INPUT
+		// Team up in two teams
+		for i := 0; i < hasNotLostCount; i++ {
+			if i%2 == 0 {
+				state.teams[hasNotLost[i]] = 1
+			} else {
+				state.teams[hasNotLost[i]] = 2
+			}
+		}
+	} else if state.stage == 3 {
+		// If number of players is odd, a random player loses
+		if hasNotLostCount%2 == 1 {
+			toLose := rand.Intn(hasNotLostCount)
+			gameOver := lose(hasNotLost[toLose])
+			if gameOver {
+				return
+			}
+			hasNotLostCount--
+			removeIndex(hasNotLost, toLose)
+		}
+
+		// Team up in pairs
+		for i := 0; i < hasNotLostCount; i++ {
+			if 2*i >= hasNotLostCount {
+				state.numTeams = i
+				break
+			}
+			state.teams[hasNotLost[2*i]] = int32(i + 1)
+			state.teams[hasNotLost[2*i+1]] = int32(i + 1)
+		}
+	}
 }
 
 func nextRow() {
@@ -231,6 +301,8 @@ func nextRow() {
 					}
 				}
 			}
+		} else {
+			fmt.Println("Ambos equipos han obtenido la misma paridad que el líder.")
 		}
 
 		// Go to next stage
@@ -241,6 +313,7 @@ func nextRow() {
 		// Leader moves
 		state.leaderMove = rand.Int31n(10) + 1
 
+		var winners []int
 		for i := 1; i <= state.numTeams; i++ {
 			var playersInTeam []int
 
@@ -250,18 +323,22 @@ func nextRow() {
 				}
 			}
 
+			//fmt.Println("[DEBUG] ", i, playersInTeam)
+
 			if state.moves[playersInTeam[0]] == state.moves[playersInTeam[1]] {
-				win(playersInTeam)
+				winners = append(winners, playersInTeam...)
 			} else {
 				if math.Abs(float64(state.moves[playersInTeam[0]]-state.leaderMove)) < math.Abs(float64(state.moves[playersInTeam[1]]-state.leaderMove)) {
-					win([]int{playersInTeam[0]})
+					winners = append(winners, playersInTeam[0])
 				} else {
-					win([]int{playersInTeam[1]})
+					winners = append(winners, playersInTeam[1])
 				}
 			}
-
-			return
 		}
+
+		win(winners)
+
+		return
 	}
 
 	// Reset values
@@ -269,16 +346,13 @@ func nextRow() {
 	for i := 0; i < 16; i++ {
 		state.moves[i] = -1
 		state.hasMoved[i] = false
-		state.moveSums[i] = 0
 	}
 
 	state.row++
 }
 
 func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateRequest) (*leaderpb.GetPlayerStateResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	id := req.GetPlayerId()
-	log.Println(id)
 
 	stage := state.stage
 	row := state.row
@@ -297,10 +371,10 @@ func (*server) GetPlayerState(ctx context.Context, req *leaderpb.GetPlayerStateR
 }
 
 func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveRequest) (*leaderpb.SendPlayerMoveResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	id := req.GetPlayerId()
 	move := req.GetMove()
-	log.Println(id, move)
+
+	//fmt.Println("[DEBUG] El jugador ", id+1, " en la ronda ", state.row, " ha enviado un ", move)
 
 	state.moves[id] = move
 	state.hasMoved[id] = true
@@ -308,7 +382,7 @@ func (*server) SendPlayerMove(ctx context.Context, req *leaderpb.SendPlayerMoveR
 
 	allHaveMoved := true
 	for i := 0; i < 16; i++ {
-		if !state.hasMoved[i] {
+		if !state.hasLost[i] && !state.hasMoved[i] {
 			allHaveMoved = false
 			break
 		}
