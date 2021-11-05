@@ -21,7 +21,7 @@ var exited = [15]bool{
 func main() {
 	// Connect to server
 	fmt.Println("Starting Client...")
-	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	cc, err := grpc.Dial("localhost:50060", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Could not connect: %v", err)
 	}
