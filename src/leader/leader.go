@@ -9,8 +9,10 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"strconv"
 	"time"
 
+	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 )
 
@@ -91,8 +93,8 @@ func lose(id int) bool {
 	// Note: Player is informed in their next GetPlayerState call
 
 	state.hasLost[id] = true
-
-	// Felipe: Llama a informar al pozo aquí.
+	str := strconv.Itoa(id) + " " + strconv.Itoa(int(state.row)) // "[num jugador] [num ronda]"
+	addToQueue(str)                                              // agrega a la cola
 
 	// Player game over message
 	fmt.Println("El jugador ", id+1, " ha muerto.")
@@ -478,4 +480,51 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 		log.Fatalf("Error Call RPC: %v", err)
 	}
 	return res.Pool
+}
+
+func addToQueue(str string) {
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		"TestQueue",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
+	fmt.Println(q)
+
+	err = ch.Publish(
+		"",
+		"TestQueue",
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        []byte(str),
+		},
+	)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
 }

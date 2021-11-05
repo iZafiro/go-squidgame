@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"go-squidgame/api/poolpb"
 	"log"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 
+	"github.com/streadway/amqp"
 	"google.golang.org/grpc"
 )
 
@@ -24,6 +29,46 @@ func main() {
 	if err := s.Serve(l); err != nil {
 		log.Fatalf("Failed to server %v", err)
 	}
+
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	defer ch.Close()
+
+	msgs, err := ch.Consume(
+		"TestQueue",
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	forever := make(chan bool)
+	go func() {
+		for d := range msgs {
+			fmt.Printf("Recieved Message: %s\n", d.Body)
+			text := strings.Split(string(d.Body), " ")
+			num, round := text[0], text[1]
+			amount := pool_total() + 100000000
+			s := "Jugador_" + num + " Ronda_" + round + " " + strconv.Itoa(amount) + "\n"
+			add_to_pool(s)
+		}
+	}()
+
+	fmt.Println(" [*] - waiting for messages")
+	add_to_pool("")
+	<-forever
 }
 
 func (*server) GetPool(ctx context.Context, req *poolpb.GetPoolRequest) (*poolpb.GetPoolResponse, error) {
@@ -33,11 +78,54 @@ func (*server) GetPool(ctx context.Context, req *poolpb.GetPoolRequest) (*poolpb
 	fmt.Println(request)
 
 	// Pack response
-	pool := 9001
-
+	pool := pool_total()
 	// Send response
 	res := &poolpb.GetPoolResponse{
 		Pool: int32(pool),
 	}
 	return res, nil
+}
+
+func add_to_pool(s string) {
+
+	f, err := os.OpenFile("pool.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := f.Write([]byte(s)); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func pool_total() int {
+
+	total := 0
+	f, err := os.Open("pool.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		text := strings.Split(scanner.Text(), " ")
+		num, err := strconv.Atoi(text[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		total = num
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return total
 }
