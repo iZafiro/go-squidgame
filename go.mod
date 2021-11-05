@@ -3,6 +3,11 @@ module go-squidgame
 go 1.17
 
 require (
+	google.golang.org/grpc v1.42.0
+	google.golang.org/protobuf v1.27.1
+)
+
+require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	golang.org/x/net v0.0.0-20211104170005-ce137452f963 // indirect
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect

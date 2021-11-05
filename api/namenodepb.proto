@@ -14,6 +14,18 @@ message SaveResponse {
     int32 result = 1;
 }
 
+message OpenRequest {
+    int32 stage = 1;
+    int32 player = 2;
+}
+
+message OpenResponse {
+    repeated int32 moves_stage1 = 1;
+    int32 move_stage2 = 2;
+    int32 move_stage3 = 3;
+}
+
 service NamenodeService{
     rpc Save (SaveRequest) returns (SaveResponse) {};
+    rpc Open (OpenRequest) returns (OpenResponse) {};
 }
