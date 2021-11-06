@@ -185,7 +185,6 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 
 //Open: Recibe la petición del líder para obtener la información de los movimientos de un jugador
 func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenodepb.OpenResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	stage := req.GetStage()
 	player := req.GetPlayer()
 	var moves_stage1 []int32
@@ -290,7 +289,6 @@ func mapPlayersToDatanodes(moves []int32, stage int32) {
 		}
 		in = remove(in, randomIndex)
 	}
-	//fmt.Println(players, dn_moves)
 }
 
 // Función para actualizar los movimientos de los jugadores según el datanode que contenga sus datos

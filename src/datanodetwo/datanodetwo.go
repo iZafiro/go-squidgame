@@ -56,7 +56,6 @@ func (*server) Write(ctx context.Context, req *datanodepb.WriteRequest) (*datano
 
 // Read: Recibe la petición del namenode para leer la información de un jugador
 func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanodepb.ReadResponse, error) {
-	log.Printf("Greet was invoked  with %v\n", req)
 	stage := req.GetStage()
 	player := req.GetPlayer()
 	moves_stage1 := []int32{-1, -1, -1, -1, -1, -1}
@@ -128,7 +127,6 @@ func readData(stage int32, player int32) []int32 {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
 		i, err := strconv.ParseInt(scanner.Text(), 10, 32)
 		if err != nil {
 			panic(err)
