@@ -299,7 +299,6 @@ func nextRow() {
 					if gameOver {
 						return
 					}
-					break
 				}
 			}
 
