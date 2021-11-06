@@ -97,6 +97,9 @@ func win(winners []int) {
 		fmt.Println("Jugador ", winners[i]+1)
 	}
 
+	str := "0 0" // "[num jugador] [num ronda]"
+	addToQueue(str)
+
 	time.Sleep(time.Duration(1<<63 - 1))
 }
 
