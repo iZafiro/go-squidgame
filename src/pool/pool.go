@@ -48,6 +48,7 @@ func main() {
 		panic(err)
 	}
 
+	//consume los mensajes de la cola
 	msgs, err := ch.Consume(
 		"TestQueue",
 		"",
