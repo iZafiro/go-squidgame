@@ -54,6 +54,7 @@ var cd2 datanodepb.DatanodeServiceClient
 var cd3 datanodepb.DatanodeServiceClient
 
 func main() {
+	os.Remove("players_datanodes_hash.txt")
 	pdh.stage1 = [16]string{}
 	pdh.stage2 = [16]string{}
 	pdh.stage3 = [16]string{}
