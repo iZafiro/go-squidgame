@@ -1,3 +1,4 @@
+
 build:
 	go build -o src/player/player.go
 	go build -o src/leader/leader.go
