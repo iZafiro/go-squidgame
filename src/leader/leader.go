@@ -71,7 +71,7 @@ func main() {
 
 	// Connect to pool server
 	fmt.Println("Starting Client...")
-	cc, err = grpc.Dial("localhost:50056", grpc.WithInsecure())
+	cc, err = grpc.Dial("10.6.43.59:50056", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Could not connect: %v", err)
 	}
@@ -486,7 +486,7 @@ func (*server) PlayerGetPool(ctx context.Context, req *leaderpb.PlayerGetPoolReq
 	request := req.GetRequest()
 
 	fmt.Println(request)
-  
+
 	// Pack response
 	pool := getPool(c)
 

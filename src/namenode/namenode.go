@@ -261,7 +261,7 @@ func mapPlayersToDatanodes(moves []int32, stage int32) {
 	players.datanode3 = []int32{}
 	in := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	datanode_index := int(0)
-	datanodes := [3]string{"0.0.0.0:50053", "0.0.0.0:50054", "0.0.0.0:50055"}
+	datanodes := [3]string{"10.6.43.57:50053", "10.6.43.58:50054", "10.6.43.59:50055"}
 	for i := 0; i < 16; i++ {
 		if i == 6 || i == 11 {
 			datanode_index++
