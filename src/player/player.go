@@ -19,7 +19,7 @@ var exited = [15]bool{
 }
 
 func main() {
-	// Connect to server
+	// Connect to leader server
 	fmt.Println("Starting Client...")
 	cc, err := grpc.Dial("10.6.43.58:50060", grpc.WithInsecure())
 	if err != nil {
@@ -80,7 +80,8 @@ func main() {
 				}
 				break
 			} else if input == 2 {
-				// Felipe: Ver el monto acumulado en el pozo.
+				pool := getPool(c)
+				fmt.Println("El monto acumulado en el pozo es: ", pool)
 			}
 		}
 
@@ -156,4 +157,18 @@ func sendMove(id int, move int32, c leaderpb.LeaderServiceClient) int32 {
 		log.Fatalf("Error Call RPC: %v", err)
 	}
 	return res.Result
+}
+
+func getPool(c leaderpb.LeaderServiceClient) int32 {
+	// Pack request
+	req := &leaderpb.PlayerGetPoolRequest{
+		Request: 1,
+	}
+
+	// Send request
+	res, err := c.PlayerGetPool(context.Background(), req)
+	if err != nil {
+		log.Fatalf("Error Call RPC: %v", err)
+	}
+	return res.Pool
 }

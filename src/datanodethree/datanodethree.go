@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"google.golang.org/grpc"
@@ -16,6 +17,10 @@ import (
 type server struct{}
 
 func main() {
+	folder := "out"
+
+	RemoveContents(folder)
+
 	fmt.Println("Starting server...")
 	l, err := net.Listen("tcp", "0.0.0.0:50055")
 	if err != nil {
@@ -29,25 +34,27 @@ func main() {
 
 }
 
+// Write: Recibe la petición por parte del namenode para almacenar la información de una ronda
+//		(de algunos jugadores) en archivos de texto por jugador y etapa
 func (*server) Write(ctx context.Context, req *datanodepb.WriteRequest) (*datanodepb.WriteResponse, error) {
 	moves := req.GetMoves()
 	stage := req.GetStage()
 	players := req.GetPlayers()
 
-	/*fmt.Println("[DEBUG]")
-	fmt.Println("Moves ", moves)
-	fmt.Println("Etapa ", stage)
-	fmt.Println("Players ", players)*/
-
+	// Almacena la información en archivos de texto por jugador
 	for i := 0; i < len(players); i++ {
 		saveData(moves[i], stage, players[i])
 	}
 	result := int32(1)
+
+	// Retorna que se almacenó con éxito
 	res := &datanodepb.WriteResponse{
 		Result: result,
 	}
 	return res, nil
 }
+
+// Read: Recibe la petición del namenode para leer la información de un jugador
 func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanodepb.ReadResponse, error) {
 	log.Printf("Greet was invoked  with %v\n", req)
 	stage := req.GetStage()
@@ -55,6 +62,7 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 	moves_stage1 := []int32{-1, -1, -1, -1, -1, -1}
 	move_stage2 := int32(-1)
 	move_stage3 := int32(-1)
+	// Lee la información del jugador por cada Etapa
 	for i := 1; i <= int(stage); i++ {
 		data := readData(int32(i), player)
 		if i == 1 {
@@ -74,7 +82,7 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 
 		}
 	}
-
+	// Retorna la información del jugador por cada Etapa
 	res := &datanodepb.ReadResponse{
 		MovesStage1: moves_stage1,
 		MoveStage2:  move_stage2,
@@ -82,9 +90,12 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 	}
 	return res, nil
 }
+
+// Función para guardar la información de un jugador en una ronda en una Etapa determinada
 func saveData(move int32, stage int32, player int32) {
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	folder := "out/"
+	f, err := os.OpenFile(folder+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,10 +114,13 @@ func saveData(move int32, stage int32, player int32) {
 		return
 	}
 }
+
+// Función para leer la información de los movimientos de un jugador en una Etapa
 func readData(stage int32, player int32) []int32 {
 	moves_response := []int32{}
+	folder := "out/"
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	file, err := os.Open(filename)
+	file, err := os.Open(folder + filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -127,4 +141,24 @@ func readData(stage int32, player int32) []int32 {
 		log.Fatal(err)
 	}
 	return moves_response
+}
+
+// Borra los archivos creados en la partida
+func RemoveContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

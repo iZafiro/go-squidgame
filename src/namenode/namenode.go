@@ -15,39 +15,46 @@ import (
 
 type server struct{}
 
+// Estructura que contiene la ip del datanode donde se almacenan los datos de cada jugador por etapa
 type players_datanodes_hash struct {
 	stage1 [16]string
 	stage2 [16]string
 	stage3 [16]string
 }
 
+// Estructura que contiene la asignación de jugadores a cada datanode por etapa
 type players_datanodes struct {
 	datanode1 []int32
 	datanode2 []int32
 	datanode3 []int32
 }
 
+// Estructura que contiene los movimientos de los jugadores a cada datanode
 type moves_datanodes struct {
 	datanode1 []int32
 	datanode2 []int32
 	datanode3 []int32
 }
 
+// Estructura que almacena la etapa actual
 type stages_state struct {
 	start        bool
 	actual_stage int32
 }
 
+// Instanciación de las estructuras
 var pdh players_datanodes_hash
 var players players_datanodes
 var dn_moves moves_datanodes
 var global_stage stages_state
 
+// Definición de los Clientes
 var cd1 datanodepb.DatanodeServiceClient
 var cd2 datanodepb.DatanodeServiceClient
 var cd3 datanodepb.DatanodeServiceClient
 
 func main() {
+	os.Remove("players_datanodes_hash.txt")
 	pdh.stage1 = [16]string{}
 	pdh.stage2 = [16]string{}
 	pdh.stage3 = [16]string{}
@@ -94,30 +101,27 @@ func main() {
 	}
 }
 
+//Save: Recibe la petición del líder para guardar los datos de la ronda
 func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenodepb.SaveResponse, error) {
 	moves := req.GetMoves()
 	row := req.GetRow()
 	stage := req.GetStage()
 
-	/*fmt.Println("[DEBUG]")
-	fmt.Println("Moves ", moves)
-	fmt.Println("Ronda ", row)
-	fmt.Println("Etapa ", stage)*/
-
-	//De este modo se asignan los datanodes solo en la primera ronda y al cambio de etapa
+	//Se asignan los jugadores a los datanodes solo en la primera ronda y al cambio de etapa
 	if global_stage.start {
 		mapPlayersToDatanodes(moves, stage)
 		global_stage.start = false
-		//]ln("Asignación primera ronda")
 	} else {
 		if stage > global_stage.actual_stage {
 			mapPlayersToDatanodes(moves, stage)
 			global_stage.actual_stage = stage
-			//]ln("Asignación ronda", global_stage.actual_stage)
 		}
 	}
+
+	// Se asignan los movimientos de los jugadores a los datanodes correspondientes
 	updateMoves(moves)
 
+	// Se guarda la información de la ronda en el archivo de texto
 	for i := 0; i < len(moves); i++ {
 		if stage == 1 {
 			saveData(int32(i+1), row, pdh.stage1[i])
@@ -128,6 +132,7 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 		}
 
 	}
+	// Se envían las peticiones a los datanodes para almacenar la información de la ronda
 	for node := 0; node < 3; node++ {
 		switch node {
 		case 0:
@@ -170,7 +175,7 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 
 	}
 
-	//]ln(moves)
+	// Se retorna que la petición fue exitosa
 	result := int32(1)
 	res := &namenodepb.SaveResponse{
 		Result: result,
@@ -178,6 +183,7 @@ func (*server) Save(ctx context.Context, req *namenodepb.SaveRequest) (*namenode
 	return res, nil
 }
 
+//Open: Recibe la petición del líder para obtener la información de los movimientos de un jugador
 func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenodepb.OpenResponse, error) {
 	log.Printf("Greet was invoked  with %v\n", req)
 	stage := req.GetStage()
@@ -191,6 +197,7 @@ func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenode
 	}
 	var res *datanodepb.ReadResponse
 	var err error
+	// Se envía la petición al datanode que contenga la información del jugador
 	if int32InSlice(player, players.datanode1) {
 		// Send request
 		res, err = cd1.Read(context.Background(), datanode_req)
@@ -204,12 +211,13 @@ func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenode
 			log.Fatalf("Error Call RPC: %v", err)
 		}
 	} else {
-		// Send requestmapPlayersToDatanodes(moves []int32, stage int32) {
+		// Send request
 		res, err = cd3.Read(context.Background(), datanode_req)
 		if err != nil {
 			log.Fatalf("Error Call RPC: %v", err)
 		}
 	}
+	// Se retornan los datos que devuelve la consulta al datanode correpondiente al líder
 	moves_stage1 = res.GetMovesStage1()
 	move_stage2 = res.GetMoveStage2()
 	move_stage3 = res.GetMoveStage3()
@@ -221,6 +229,7 @@ func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenode
 	return response, nil
 }
 
+// Función para guardar la información en el archivo de texto
 func saveData(player int32, row int32, ip string) {
 	filename := "players_datanodes_hash.txt"
 	text := "Jugador_" + fmt.Sprint(player) + " Ronda_" + fmt.Sprint(row) + " " + ip
@@ -241,6 +250,8 @@ func saveData(player int32, row int32, ip string) {
 		return
 	}
 }
+
+// Función para asignar jugadores a los nodos de manera aleatoria
 func mapPlayersToDatanodes(moves []int32, stage int32) {
 	dn_moves.datanode1 = []int32{}
 	dn_moves.datanode2 = []int32{}
@@ -281,6 +292,8 @@ func mapPlayersToDatanodes(moves []int32, stage int32) {
 	}
 	//fmt.Println(players, dn_moves)
 }
+
+// Función para actualizar los movimientos de los jugadores según el datanode que contenga sus datos
 func updateMoves(moves []int32) {
 	dn_moves.datanode1 = []int32{}
 	dn_moves.datanode2 = []int32{}
@@ -297,10 +310,13 @@ func updateMoves(moves []int32) {
 	}
 }
 
+// Función para aliminar un elemento de un slice por su índice
 func remove(s []int, i int) []int {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
+
+// Función para comprobar si un int32 está dentro de un slice
 func int32InSlice(a int32, list []int32) bool {
 	for _, b := range list {
 		if b == a {
