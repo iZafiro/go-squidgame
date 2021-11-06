@@ -7,6 +7,7 @@ build:
     go build -o src/datanode2/datanode2.go
     go build -o src/datanode3/datanode3.go
 
+
 player:
     go run src/player/player.go
 
