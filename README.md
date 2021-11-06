@@ -1,5 +1,10 @@
 # go-squidgame
 
+Grupo 45
+Fabián Levicán 201603012-3
+Paula Pérez 201603022-0
+Felipe Vicencio 201603028-k
+
 # instalacion
 
 Deberia estar todo instalado en las máquinas. En caso de que no funcione RabbitMQ, ejectuar "systemctl start rabbitmq-server" en dist178 y dist179.
