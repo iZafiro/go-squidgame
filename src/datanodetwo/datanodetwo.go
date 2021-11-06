@@ -17,7 +17,7 @@ import (
 type server struct{}
 
 func main() {
-	folder := "out"
+	folder := "src/datanodetwo/out"
 
 	RemoveContents(folder)
 
@@ -94,7 +94,7 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 // Función para guardar la información de un jugador en una ronda en una Etapa determinada
 func saveData(move int32, stage int32, player int32) {
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	folder := "out/"
+	folder := "src/datanodetwo/out/"
 	f, err := os.OpenFile(folder+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -118,7 +118,7 @@ func saveData(move int32, stage int32, player int32) {
 // Función para leer la información de los movimientos de un jugador en una Etapa
 func readData(stage int32, player int32) []int32 {
 	moves_response := []int32{}
-	folder := "out/"
+	folder := "src/datanodetwo/out/"
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
 	file, err := os.Open(folder + filename)
 	if err != nil {
