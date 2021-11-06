@@ -10,11 +10,11 @@ pool:
 namenode:
 	go run src/namenode/namenode.go
 
-datanode1:
-	go run src/datanode1/datanode1.go
+datanodeone:
+	go run src/datanodeone/datanodeone.go
 
-datanode2:
-	go run src/datanode2/datanode2.go
+datanodetwo:
+	go run src/datanodetwo/datanodetwo.go
 
-datanode3:
-	go run src/datanode3/datanode3.go
+datanodethree:
+	go run src/datanodethree/datanodethree.go
