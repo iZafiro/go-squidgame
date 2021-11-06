@@ -18,6 +18,7 @@ import (
 type server struct{}
 
 func main() {
+	os.Remove("pool.txt") // elimina txt al inicio de la partida
 	//Connectar a RabbitMQ
 	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672/")
 	if err != nil {
@@ -74,12 +75,7 @@ func main() {
 				amount := pool_total() + 100000000
 				s := "Jugador_" + num + " Ronda_" + round + " " + strconv.Itoa(amount) + "\n"
 				add_to_pool(s) // agrega jugador al pool
-			} else {
-				err := os.Remove("pool.txt") // elimina txt cuando recibe un 0
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
+			} 
 		}
 	}()
 
