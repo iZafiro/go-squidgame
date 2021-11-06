@@ -68,7 +68,6 @@ func main() {
 	//Abrir thread del listener de RabbitMQ
 	go func() {
 		for d := range msgs {
-			fmt.Printf("Recieved Message: %s\n", d.Body)
 			text := strings.Split(string(d.Body), " ")
 			num, round := text[0], text[1]
 			if num != "0" {
