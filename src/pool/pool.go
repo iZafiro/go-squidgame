@@ -47,6 +47,7 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
+	fmt.Println(q)
 
 	msgs, err := ch.Consume(
 		"TestQueue",
