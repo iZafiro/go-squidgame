@@ -8,11 +8,11 @@ Paula Pérez 201603022-0
 
 Felipe Vicencio 201603028-k
 
-# INstalación
+# Instalación
 
 Debería estar todo instalado en las máquinas. En caso de que no funcione RabbitMQ, ejecutar "systemctl start rabbitmq-server" en dist178 y dist179.
 
-# Use
+# Uso
 
 Para cada máquina se debe usar el comando "make [programa]" con los programas correspondientes desde la carpeta go-squidgame.
 
