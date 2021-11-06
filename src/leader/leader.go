@@ -38,6 +38,7 @@ type GameState struct {
 var state GameState
 var s *grpc.Server
 var cn namenodepb.NamenodeServiceClient
+var c poolpb.PoolServiceClient
 
 func main() {
 	// Set initial values
@@ -67,6 +68,15 @@ func main() {
 	}
 	defer cc.Close()
 	cn = namenodepb.NewNamenodeServiceClient(cc)
+
+	// Connect to pool server
+	fmt.Println("Starting Client...")
+	cc, err = grpc.Dial("localhost:50056", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Could not connect: %v", err)
+	}
+	defer cc.Close()
+	c = poolpb.NewPoolServiceClient(cc)
 
 	// Start server
 	fmt.Println("Starting server...")
@@ -473,15 +483,6 @@ func (*server) PlayerGetPool(ctx context.Context, req *leaderpb.PlayerGetPoolReq
 	request := req.GetRequest()
 
 	fmt.Println(request)
-
-	// Connect to server
-	fmt.Println("Starting Client...")
-	cc, err := grpc.Dial("localhost:50056", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
-	}
-	defer cc.Close()
-	c := poolpb.NewPoolServiceClient(cc)
 
 	// Pack response
 	pool := getPool(c)
