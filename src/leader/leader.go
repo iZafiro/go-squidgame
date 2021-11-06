@@ -512,6 +512,8 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 }
 
 func addToQueue(str string) {
+
+	//Conexion con RabbitMQ
 	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672")
 	if err != nil {
 		fmt.Println(err)
@@ -526,7 +528,7 @@ func addToQueue(str string) {
 	}
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
+	_, err = ch.QueueDeclare(
 		"TestQueue",
 		false,
 		false,
@@ -539,8 +541,7 @@ func addToQueue(str string) {
 		panic(err)
 	}
 
-	fmt.Println(q)
-
+	//publica mensajes a la cola
 	err = ch.Publish(
 		"",
 		"TestQueue",

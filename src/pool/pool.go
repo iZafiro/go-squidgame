@@ -18,7 +18,7 @@ import (
 type server struct{}
 
 func main() {
-	//Connect to RabbitMQ
+	//Connectar a RabbitMQ
 	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672/")
 	if err != nil {
 		fmt.Println(err)
@@ -35,7 +35,7 @@ func main() {
 	}
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
+	_, err = ch.QueueDeclare(
 		"TestQueue",
 		false,
 		false,
@@ -47,8 +47,8 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Println(q)
 
+	//consume los mensajes de la cola
 	msgs, err := ch.Consume(
 		"TestQueue",
 		"",
@@ -63,22 +63,30 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(" [*] - waiting for messages")
 	add_to_pool("")
+
+	//Abrir thread del listener de RabbitMQ
 	go func() {
 		for d := range msgs {
 			fmt.Printf("Recieved Message: %s\n", d.Body)
 			text := strings.Split(string(d.Body), " ")
 			num, round := text[0], text[1]
-			amount := pool_total() + 100000000
-			s := "Jugador_" + num + " Ronda_" + round + " " + strconv.Itoa(amount) + "\n"
-			add_to_pool(s)
+			if num != "0" {
+				amount := pool_total() + 100000000
+				s := "Jugador_" + num + " Ronda_" + round + " " + strconv.Itoa(amount) + "\n"
+				add_to_pool(s) // agrega jugador al pool
+			} else {
+				err := os.Remove("pool.txt") // elimina txt cuando recibe un 0
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 		}
 	}()
 
 	// Start server
 	fmt.Println("Starting server...")
-	l, err := net.Listen("tcp", "0.0.0.0:50056")
+	l, err := net.Listen("tcp", "10.6.43.59:50056")
 	if err != nil {
 		log.Fatalf("Failed to listen %v", err)
 	}
@@ -106,11 +114,13 @@ func (*server) GetPool(ctx context.Context, req *poolpb.GetPoolRequest) (*poolpb
 
 func add_to_pool(s string) {
 
+	//Crea o abre archivo txt
 	f, err := os.OpenFile("pool.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	//Escribe mensaje al final
 	if _, err := f.Write([]byte(s)); err != nil {
 		log.Fatal(err)
 	}
@@ -145,5 +155,6 @@ func pool_total() int {
 		log.Fatal(err)
 	}
 
+	//retorna el último monto
 	return total
 }
