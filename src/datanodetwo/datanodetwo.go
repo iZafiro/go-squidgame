@@ -17,7 +17,7 @@ import (
 type server struct{}
 
 func main() {
-	folder := "src/datanodetwo/out"
+	folder := "src/datanodeone/out"
 
 	RemoveContents(folder)
 
@@ -58,29 +58,28 @@ func (*server) Write(ctx context.Context, req *datanodepb.WriteRequest) (*datano
 func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanodepb.ReadResponse, error) {
 	stage := req.GetStage()
 	player := req.GetPlayer()
-	moves_stage1 := []int32{-1, -1, -1, -1, -1, -1}
+	moves_stage1 := []int32{}
 	move_stage2 := int32(-1)
 	move_stage3 := int32(-1)
-	// Lee la información del jugador por cada Etapa
-	for i := 1; i <= int(stage); i++ {
-		data := readData(int32(i), player)
-		if i == 1 {
-			moves_stage1 = data
-		} else if i == 2 {
-			if len(data) > 0 {
-				move_stage2 = data[0]
-			} else {
-				move_stage2 = -1
-			}
+	// Lee la información del jugador en la Etapa correspondiente
+	data := readData(int32(stage), player)
+	if stage == 1 {
+		moves_stage1 = data
+	} else if stage == 2 {
+		if len(data) > 0 {
+			move_stage2 = data[0]
 		} else {
-			if len(data) > 0 {
-				move_stage3 = data[0]
-			} else {
-				move_stage3 = -1
-			}
-
+			move_stage2 = -1
 		}
+	} else {
+		if len(data) > 0 {
+			move_stage3 = data[0]
+		} else {
+			move_stage3 = -1
+		}
+
 	}
+
 	// Retorna la información del jugador por cada Etapa
 	res := &datanodepb.ReadResponse{
 		MovesStage1: moves_stage1,
@@ -93,7 +92,7 @@ func (*server) Read(ctx context.Context, req *datanodepb.ReadRequest) (*datanode
 // Función para guardar la información de un jugador en una ronda en una Etapa determinada
 func saveData(move int32, stage int32, player int32) {
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
-	folder := "src/datanodetwo/out/"
+	folder := "src/datanodeone/out/"
 	f, err := os.OpenFile(folder+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -117,7 +116,7 @@ func saveData(move int32, stage int32, player int32) {
 // Función para leer la información de los movimientos de un jugador en una Etapa
 func readData(stage int32, player int32) []int32 {
 	moves_response := []int32{}
-	folder := "src/datanodetwo/out/"
+	folder := "src/datanodeone/out/"
 	filename := "jugador_" + fmt.Sprint(player+1) + "__etapa_" + fmt.Sprint(stage) + ".txt"
 	file, err := os.Open(folder + filename)
 	if err != nil {

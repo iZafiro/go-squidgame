@@ -22,6 +22,13 @@ type players_datanodes_hash struct {
 	stage3 [16]string
 }
 
+// Estructura que contiene en qué datanode se encuentra cada jugador por etapa
+type datanodes_stages struct {
+	stage1 [16]int32
+	stage2 [16]int32
+	stage3 [16]int32
+}
+
 // Estructura que contiene la asignación de jugadores a cada datanode por etapa
 type players_datanodes struct {
 	datanode1 []int32
@@ -47,6 +54,7 @@ var pdh players_datanodes_hash
 var players players_datanodes
 var dn_moves moves_datanodes
 var global_stage stages_state
+var datanodes_map datanodes_stages
 
 // Definición de los Clientes
 var cd1 datanodepb.DatanodeServiceClient
@@ -58,6 +66,9 @@ func main() {
 	pdh.stage1 = [16]string{}
 	pdh.stage2 = [16]string{}
 	pdh.stage3 = [16]string{}
+	datanodes_map.stage1 = [16]int32{}
+	datanodes_map.stage2 = [16]int32{}
+	datanodes_map.stage3 = [16]int32{}
 	global_stage.start = true
 	global_stage.actual_stage = int32(1)
 
@@ -190,36 +201,109 @@ func (*server) Open(ctx context.Context, req *namenodepb.OpenRequest) (*namenode
 	var moves_stage1 []int32
 	move_stage2 := int32(-1)
 	move_stage3 := int32(-1)
-	datanode_req := &datanodepb.ReadRequest{
-		Stage:  stage,
-		Player: player,
-	}
+
 	var res *datanodepb.ReadResponse
 	var err error
-	// Se envía la petición al datanode que contenga la información del jugador
-	if int32InSlice(player, players.datanode1) {
-		// Send request
-		res, err = cd1.Read(context.Background(), datanode_req)
-		if err != nil {
-			log.Fatalf("Error Call RPC: %v", err)
+	// Se envía la petición al datanode que contenga la información del jugador por Etapa
+	for i := 1; i <= int(stage); i++ {
+		datanode_req := &datanodepb.ReadRequest{
+			Stage:  int32(i),
+			Player: player,
 		}
-	} else if int32InSlice(player, players.datanode2) {
-		// Send request
-		res, err = cd2.Read(context.Background(), datanode_req)
-		if err != nil {
-			log.Fatalf("Error Call RPC: %v", err)
+		// Se busca por Etapa
+		switch i {
+		// Etapa 1
+		case 1:
+			// Se busca por datanode
+			switch datanodes_map.stage1[player] {
+			// datanodeone
+			case 0:
+				// Send request
+				res, err = cd1.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodetwo
+			case 1:
+				// Send request
+				res, err = cd2.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodethree
+			case 2:
+				// Send request
+				res, err = cd3.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+
+			}
+			// Se guarda la respuesta de la Etapa 1
+			moves_stage1 = res.GetMovesStage1()
+		// Etapa 2
+		case 2:
+			// Se busca por datanode
+			switch datanodes_map.stage2[player] {
+			// datanodeone
+			case 0:
+				// Send request
+				res, err = cd1.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodetwo
+			case 1:
+				// Send request
+				res, err = cd2.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodethree
+			case 2:
+				// Send request
+				res, err = cd3.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+
+			}
+			// Se guarda la respuesta de la Etapa 2
+			move_stage2 = res.GetMoveStage2()
+		// Etapa 3
+		case 3:
+			// Se busca por datanode
+			switch datanodes_map.stage3[player] {
+			// datanodeone
+			case 0:
+				// Send request
+				res, err = cd1.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodetwo
+			case 1:
+				// Send request
+				res, err = cd2.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+			// datanodethree
+			case 2:
+				// Send request
+				res, err = cd3.Read(context.Background(), datanode_req)
+				if err != nil {
+					log.Fatalf("Error Call RPC: %v", err)
+				}
+
+			}
+			// Se guarda la respuesta de la Etapa 3
+			move_stage3 = res.GetMoveStage3()
 		}
-	} else {
-		// Send request
-		res, err = cd3.Read(context.Background(), datanode_req)
-		if err != nil {
-			log.Fatalf("Error Call RPC: %v", err)
-		}
+
 	}
+
 	// Se retornan los datos que devuelve la consulta al datanode correpondiente al líder
-	moves_stage1 = res.GetMovesStage1()
-	move_stage2 = res.GetMoveStage2()
-	move_stage3 = res.GetMoveStage3()
 	response := &namenodepb.OpenResponse{
 		MovesStage1: moves_stage1,
 		MoveStage2:  move_stage2,
@@ -268,12 +352,15 @@ func mapPlayersToDatanodes(moves []int32, stage int32) {
 		randomIndex := rand.Intn(len(in))
 		if stage == 1 {
 			pdh.stage1[in[randomIndex]] = datanodes[datanode_index]
+			datanodes_map.stage1[in[randomIndex]] = int32(datanode_index)
 
 		} else if stage == 2 {
 			pdh.stage2[in[randomIndex]] = datanodes[datanode_index]
+			datanodes_map.stage2[in[randomIndex]] = int32(datanode_index)
 
 		} else {
 			pdh.stage3[in[randomIndex]] = datanodes[datanode_index]
+			datanodes_map.stage3[in[randomIndex]] = int32(datanode_index)
 
 		}
 		switch datanode_index {
@@ -312,14 +399,4 @@ func updateMoves(moves []int32) {
 func remove(s []int, i int) []int {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
-}
-
-// Función para comprobar si un int32 está dentro de un slice
-func int32InSlice(a int32, list []int32) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
 }
