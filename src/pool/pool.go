@@ -19,7 +19,7 @@ type server struct{}
 
 func main() {
 	//Connect to RabbitMQ
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672/")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
@@ -34,6 +34,20 @@ func main() {
 		panic(err)
 	}
 	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		"TestQueue",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	fmt.Println(q)
 
 	msgs, err := ch.Consume(
 		"TestQueue",

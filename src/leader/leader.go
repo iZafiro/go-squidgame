@@ -62,7 +62,7 @@ func main() {
 
 	// Connect to namenode server
 	fmt.Println("Starting Client...")
-	cc, err := grpc.Dial("localhost:50052", grpc.WithInsecure())
+	cc, err := grpc.Dial("10.6.43.60:50052", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Could not connect: %v", err)
 	}
@@ -106,6 +106,9 @@ func win(winners []int) {
 	for i := 0; i < len(winners); i++ {
 		fmt.Println("Jugador ", winners[i]+1)
 	}
+
+	str := "0 0" // "[num jugador] [num ronda]"
+	addToQueue(str)
 
 	time.Sleep(time.Duration(1<<63 - 1))
 }
@@ -483,7 +486,7 @@ func (*server) PlayerGetPool(ctx context.Context, req *leaderpb.PlayerGetPoolReq
 	request := req.GetRequest()
 
 	fmt.Println(request)
-
+  
 	// Pack response
 	pool := getPool(c)
 
@@ -509,7 +512,7 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 }
 
 func addToQueue(str string) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672")
+	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
