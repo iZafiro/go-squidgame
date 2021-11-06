@@ -508,7 +508,7 @@ func getPool(c poolpb.PoolServiceClient) int32 {
 }
 
 func addToQueue(str string) {
-	conn, err := amqp.Dial("amqp://usuari2:pass2@10.6.43.59:5672")
+	conn, err := amqp.Dial("amqp://usuario2:pass2@10.6.43.59:5672")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
