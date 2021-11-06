@@ -35,6 +35,19 @@ func main() {
 	}
 	defer ch.Close()
 
+	q, err := ch.QueueDeclare(
+		"TestQueue",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+
 	msgs, err := ch.Consume(
 		"TestQueue",
 		"",
